@@ -150,13 +150,18 @@ await expectError(
   () => as('masha', `select set_role($1, 'moderator')`, [ids.vova]),
   'Недостаточно прав',
 );
-await expectOk('модератор видит скрытое в очереди и восстанавливает', async () => {
-  const [{ o }] = await as('masha', 'select mod_overview() as o');
+await expectError(
+  'модератор не видит раздел «Модерация»',
+  () => as('masha', 'select mod_overview()'),
+  'Недостаточно прав',
+);
+await expectOk('президент видит скрытое в очереди и восстанавливает', async () => {
+  const [{ o }] = await as('lera', 'select mod_overview() as o');
   assert(
     o.queue.some((p) => p.id === p2 && p.hidden),
     'нет в очереди',
   );
-  await as('masha', 'select restore_post($1)', [p2]);
+  await as('lera', 'select restore_post($1)', [p2]);
   assert(
     (await board('kolya')).posts.some((p) => p.id === p2),
     'не восстановилось',
@@ -171,7 +176,12 @@ await expectOk('после проверки жалобы больше не ск�
 });
 await expectError('ученик не удаляет чужое', () => as('kolya', 'select delete_post($1)', [p2]), 'только модераторы');
 await expectOk('модератор удаляет чужое с причиной', () => as('masha', `select delete_post($1, 'спам')`, [p2]));
-await expectOk('модератор блокирует ученика', () => as('masha', 'select set_banned($1, true)', [ids.kolya]));
+await expectError(
+  'модератор не блокирует',
+  () => as('masha', 'select set_banned($1, true)', [ids.kolya]),
+  'Недостаточно прав',
+);
+await expectOk('президент блокирует ученика', () => as('lera', 'select set_banned($1, true)', [ids.kolya]));
 await expectError(
   'заблокированный не предлагает',
   () => as('kolya', `select create_post('Новое желание')`),
@@ -179,11 +189,11 @@ await expectError(
 );
 await expectError(
   'модератор не блокирует президента',
-  () => as('masha', 'select set_banned($1, true)', [ids.lera]),
+  () => as('lera', 'select set_banned($1, true)', [ids.masha]),
   'нельзя',
 );
-await expectOk('модератор добавляет слово, фильтр сразу работает', async () => {
-  await as('masha', `select add_banned_word('Тупица')`);
+await expectOk('президент добавляет слово, фильтр сразу работает', async () => {
+  await as('lera', `select add_banned_word('Тупица')`);
   try {
     await as('vova', `select create_post('Учитель тупица')`);
     throw new Error('прошло');
@@ -203,13 +213,12 @@ await expectOk('президент видит, кто и когда заходи
   assert(masha.registeredAt && masha.lastSeenAt, JSON.stringify(masha));
   const [{ o }] = await as('lera', 'select mod_overview() as o');
   assert(o.people.total === 5 && o.people.today >= 1, JSON.stringify(o.people));
-  const [{ u: forMod }] = await as('masha', `select search_users('') as u`);
-  assert(
-    forMod.every((x) => x.lastSeenAt === null && x.registeredAt === null),
-    'модератор видит даты',
-  );
-  const [{ o: modO }] = await as('masha', 'select mod_overview() as o');
-  assert(modO.people === null, 'модератор видит сводку');
+  try {
+    await as('masha', `select search_users('')`);
+    throw new Error('модератор видит список людей');
+  } catch (e) {
+    assert(e.message.includes('Недостаточно прав'), e.message);
+  }
 });
 await expectOk('президент снимает модератора', () => as('lera', `select set_role($1, 'member')`, [ids.masha]));
 
@@ -252,7 +261,7 @@ await expectOk('ИИ удаляет мем полностью: на сайте �
   const b = await board('kolya');
   assert(!('myRemoved' in b) && b.postsLeft === 1, JSON.stringify({ left: b.postsLeft }));
   await db.exec(`update profiles set role = 'moderator' where id = '${ids.masha}'`);
-  const [{ o }] = await as('masha', 'select mod_overview() as o');
+  const [{ o }] = await as('lera', 'select mod_overview() as o');
   assert(!o.queue.some((p) => p.text.includes('кринж')), 'висит в очереди');
   assert(
     o.log.some((l) => l.action === 'ai_remove' && l.actor === 'ИИ-модератор' && l.details.includes('мем')),

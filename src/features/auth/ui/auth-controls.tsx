@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { signOut } from '@/entities/session';
-import { canModerate, type Profile, RoleBadge } from '@/entities/user';
+import { type Profile, RoleBadge } from '@/entities/user';
 import { useAuthDialog } from '../model/store';
 
 export function SignInButton({ variant = 'chip' }: { variant?: 'chip' | 'primary' }) {
@@ -35,7 +35,7 @@ export function UserMenu({ me }: { me: Profile }) {
           👑 Президент
         </Link>
       )}
-      {canModerate(me.role) && (
+      {me.role === 'president' && (
         <Link href="/moderation/" className="chip">
           Модерация
         </Link>

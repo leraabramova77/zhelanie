@@ -47,7 +47,7 @@ export function UserManager({ myRole, myId, people }: Props) {
     onError: (e) => toast(errorMessage(e)),
   });
 
-  const canReset = (u: ModUser) => u.id !== myId && (u.role === 'member' || (president && u.role === 'moderator'));
+  const canReset = (u: ModUser) => president && u.id !== myId && u.role !== 'president';
 
   return (
     <section className="card">

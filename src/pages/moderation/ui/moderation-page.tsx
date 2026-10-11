@@ -24,7 +24,7 @@ export function ModerationPage() {
         <section className="card">
           <h2>Нужно войти</h2>
           <p className="muted" style={{ marginBottom: 14 }}>
-            Модерация доступна модераторам и президенту.
+            Раздел «Модерация» доступен только президенту.
           </p>
           <SignInButton variant="primary" />
         </section>
@@ -32,8 +32,8 @@ export function ModerationPage() {
       {session && overview.isPending && <div className="card skeleton" aria-busy="true" />}
       {overview.isError && (
         <section className="card">
-          <h2>Нет доступа</h2>
-          <p className="muted">{errorMessage(overview.error)}. Модераторов назначает президент школьного совета.</p>
+          <h2>Только для президента</h2>
+          <p className="muted">{errorMessage(overview.error)}. Раздел «Модерация» видит только президент.</p>
         </section>
       )}
       {overview.data && <ModerationPanel data={overview.data} myId={session?.user.id} />}

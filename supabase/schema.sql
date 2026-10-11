@@ -571,7 +571,7 @@ end $$;
 create or replace function restore_post(p_post uuid) returns void
 language plpgsql security definer set search_path = public as $$
 declare
-  me profiles := require_role('moderator');
+  me profiles := require_role('president');
   p posts;
 begin
   update posts set hidden = false, reviewed = true,
@@ -585,7 +585,7 @@ end $$;
 create or replace function add_banned_word(p_word text) returns text
 language plpgsql security definer set search_path = public as $$
 declare
-  me profiles := require_role('moderator');
+  me profiles := require_role('president');
   prefix text := case when left(btrim(coalesce(p_word, '')), 1) = '^' then '^' else '' end;
   w text := regexp_replace(normalize_text(btrim(coalesce(p_word, ''))), '[^а-яa-z0-9]', '', 'g');
 begin
@@ -597,7 +597,7 @@ end $$;
 
 create or replace function remove_banned_word(p_word text) returns void
 language plpgsql security definer set search_path = public as $$
-declare me profiles := require_role('moderator');
+declare me profiles := require_role('president');
 begin
   delete from banned_words where word = p_word;
   if found then perform log_action(me.id, 'remove_word', p_word); end if;
@@ -606,7 +606,7 @@ end $$;
 create or replace function search_users(p_query text default '') returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare
-  me profiles := require_role('moderator');
+  me profiles := require_role('president');
   q text := btrim(coalesce(p_query, ''));
 begin
   -- Даты регистрации и последнего визита видит только президент.
@@ -644,7 +644,7 @@ end $$;
 create or replace function set_banned(p_user uuid, p_banned boolean) returns void
 language plpgsql security definer set search_path = public as $$
 declare
-  me profiles := require_role('moderator');
+  me profiles := require_role('president');
   target profiles;
 begin
   select * into target from profiles where id = p_user;
@@ -669,7 +669,7 @@ end $$;
 create or replace function mod_overview() returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare
-  me profiles := require_role('moderator');
+  me profiles := require_role('president');
   cur date := current_week();
 begin
   return jsonb_build_object(

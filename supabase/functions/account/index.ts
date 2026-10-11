@@ -78,10 +78,8 @@ async function resetPassword(body: Record<string, unknown>, authHeader: string) 
   if (!me || !target) return json({ error: 'Пользователь не найден' }, 404);
   if (me.id === target.id) return json({ error: 'Свой пароль меняй в меню «Пароль»' }, 400);
 
-  // Модератор сбрасывает пароль ученикам, президент — ученикам и модераторам.
-  const allowed =
-    (me.role === 'moderator' && target.role === 'member') ||
-    (me.role === 'president' && target.role !== 'president');
+  // Временный пароль выдаёт только президент — ученикам и модераторам.
+  const allowed = me.role === 'president' && target.role !== 'president';
   if (!allowed) return json({ error: 'Недостаточно прав' }, 403);
 
   const password = tempPassword();
