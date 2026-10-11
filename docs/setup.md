@@ -12,7 +12,17 @@
    ```
 4. Project Settings → API: взять **Project URL** и ключ **anon / publishable**.
 
+## Текущая установка (прод)
+
+- Supabase-проект `zngvtcygybnxrlmdmxme` («leraabramova77's Project», регион ap-southeast-2).
+  В нём же живут таблицы другого проекта Леры (`classes`, `homework`, `users`) — схема их не трогает.
+- Вход: GitHub App **zhelanie-nedeli-lera77** (https://github.com/apps/zhelanie-nedeli-lera77), создан через
+  manifest flow, разрешение «Email addresses: read». Его Client ID / secret прописаны в Supabase → Auth → GitHub.
+- Сайт: https://leraabramova77.github.io/zhelanie/ (репозиторий `leraabramova77/zhelanie`).
+
 ## 2. Вход через GitHub
+
+Подходит и GitHub App (как сейчас), и классический OAuth App:
 
 1. https://github.com/settings/applications/new
    - Homepage URL: `https://leraabramova77.github.io/zhelanie/`
