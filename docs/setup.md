@@ -15,13 +15,13 @@
 ## 2. Вход через GitHub
 
 1. https://github.com/settings/applications/new
-   - Homepage URL: `https://leraabramova77.github.io/help-project/`
+   - Homepage URL: `https://leraabramova77.github.io/zhelanie/`
    - Authorization callback URL: `https://<ref>.supabase.co/auth/v1/callback`
 2. Скопировать **Client ID**, создать **Client secret**.
 3. Supabase → Authentication → Sign In / Providers → GitHub: включить, вставить ID и secret.
 4. Supabase → Authentication → URL Configuration:
-   - Site URL: `https://leraabramova77.github.io/help-project/`
-   - Redirect URLs: `https://leraabramova77.github.io/help-project/**`, `http://localhost:3000/**`
+   - Site URL: `https://leraabramova77.github.io/zhelanie/`
+   - Redirect URLs: `https://leraabramova77.github.io/zhelanie/**`, `http://localhost:3000/**`
 
 ## 3. Уведомления
 
@@ -37,13 +37,13 @@ npx supabase functions deploy push --project-ref <ref> --no-verify-jwt --use-api
 
 ## 4. GitHub Pages
 
-1. Репозиторий: https://github.com/leraabramova77/help-project
+1. Репозиторий: https://github.com/leraabramova77/zhelanie
 2. Settings → Pages → Source: **GitHub Actions**.
 3. Settings → Secrets and variables → Actions → **Variables**:
    `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `NEXT_PUBLIC_SCHOOL_NAME`.
 4. Любой push в `main` запускает [.github/workflows/deploy.yml](../.github/workflows/deploy.yml):
    lint → typecheck → test:sql → build → deploy.
-5. Сайт: https://leraabramova77.github.io/help-project/
+5. Сайт: https://leraabramova77.github.io/zhelanie/
 
 ## Локально
 
