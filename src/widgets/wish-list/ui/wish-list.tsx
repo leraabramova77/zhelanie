@@ -14,6 +14,7 @@ export function WishList({ board }: { board: Board }) {
   const posts = board.posts;
   const leaderId = posts[0] && posts[0].likes > posts[0].dislikes ? posts[0].id : null;
   const places = new Map(posts.map((p, i) => [p.id, i + 1]));
+  const aiPicks = new Set(board.aiTop.map((p) => p.id));
   const shown = sort === 'new' ? [...posts].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : posts;
 
   return (
@@ -33,7 +34,14 @@ export function WishList({ board }: { board: Board }) {
       {shown.length > 0 ? (
         <ol className="posts">
           {shown.map((w) => (
-            <WishRow key={w.id} wish={w} board={board} place={places.get(w.id) ?? 0} leader={w.id === leaderId} />
+            <WishRow
+              key={w.id}
+              wish={w}
+              board={board}
+              place={places.get(w.id) ?? 0}
+              leader={w.id === leaderId}
+              aiPick={aiPicks.has(w.id)}
+            />
           ))}
         </ol>
       ) : (
@@ -43,7 +51,19 @@ export function WishList({ board }: { board: Board }) {
   );
 }
 
-function WishRow({ wish, board, place, leader }: { wish: Wish; board: Board; place: number; leader: boolean }) {
+function WishRow({
+  wish,
+  board,
+  place,
+  leader,
+  aiPick,
+}: {
+  wish: Wish;
+  board: Board;
+  place: number;
+  leader: boolean;
+  aiPick: boolean;
+}) {
   const { picker, openPicker, closePicker } = useWishListStore();
   const report = useReportWish();
   const remove = useDeleteWish();
@@ -128,6 +148,7 @@ function WishRow({ wish, board, place, leader }: { wish: Wish; board: Board; pla
       wish={wish}
       place={place}
       leader={leader}
+      aiPick={aiPick}
       actions={actions}
       footer={footer}
       votes={<VoteButtons wish={wish} onUnauthorized={me ? undefined : openSignIn} />}

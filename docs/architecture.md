@@ -10,6 +10,7 @@
 | Бэкенд | Supabase: Postgres + Auth + Edge Functions + pg_cron | Без своего сервера, бесплатно |
 | Вход | Supabase Auth: логин + пароль, регистрация через Edge Function `account` | Без почты и сторонних аккаунтов |
 | Уведомления | Web Push (VAPID) через Edge Function `push` | |
+| ИИ-модератор | OpenRouter (`dots-studio/dots-3-note-preview:free`) через Edge Function `ai` + триггер pg_net | Проверка и оценка желаний |
 | Линтер и форматтер | Biome 2 | Одна утилита вместо ESLint + Prettier |
 | Тесты логики | PGlite (Postgres в WASM) + `scripts/test-schema.mjs` | Проверка SQL без Supabase |
 | CI/CD | GitHub Actions → GitHub Pages | lint → typecheck → test:sql → build → deploy |
@@ -80,6 +81,7 @@ src/
 | `mod_overview()` | модератор | Очередь, желания недели, слова, журнал, число подписчиков |
 | `save_push_subscription` / `remove_push_subscription` | все | Подписка на push |
 | `maintain()` | cron | Победитель и очистка |
+| `ai_apply` / `ai_failed` | Edge Function `ai` | Решение ИИ: оставить с оценкой или скрыть с причиной |
 
 ### Фоновые задачи
 

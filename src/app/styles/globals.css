@@ -828,6 +828,72 @@ a {
   overflow-wrap: anywhere;
 }
 
+/* ---------- ИИ ---------- */
+
+.tag.ai {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+.ai-picks {
+  padding: 20px;
+  border-radius: var(--radius);
+  color: #fff;
+  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  box-shadow: var(--shadow);
+}
+.ai-picks-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+.ai-picks-note {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+.ai-picks-list {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.ai-picks-list li {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.15);
+}
+.ai-pick-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ai-pick-text {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.ai-score {
+  flex-shrink: 0;
+  padding: 2px 10px;
+  border-radius: 99px;
+  background: #fff;
+  color: #4338ca;
+  font: 800 0.85rem / 1.6 var(--font-head);
+}
+.ai-pick-comment {
+  margin: 6px 0 0;
+  font-size: 0.88rem;
+  opacity: 0.9;
+}
+.ai-picks-foot {
+  margin: 12px 0 0;
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
 /* ---------- Вход и регистрация ---------- */
 
 .dialog-backdrop {

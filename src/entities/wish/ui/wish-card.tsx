@@ -8,12 +8,13 @@ interface Props {
   wish: Wish;
   place: number;
   leader: boolean;
+  aiPick?: boolean; // в топе ИИ
   votes: ReactNode; // слот для кнопок голосования
   actions?: ReactNode; // слот для «удалить», «пожаловаться»
   footer?: ReactNode; // слот под карточкой (например, выбор причины)
 }
 
-export function WishCard({ wish, place, leader, votes, actions, footer }: Props) {
+export function WishCard({ wish, place, leader, aiPick, votes, actions, footer }: Props) {
   const now = useNow(60_000);
   const total = wish.likes + wish.dislikes;
   const share = total ? (wish.likes / total) * 100 : 0;
@@ -25,6 +26,7 @@ export function WishCard({ wish, place, leader, votes, actions, footer }: Props)
         <p className="post-text">{wish.text}</p>
         <div className="post-meta">
           {leader && <span className="tag lead">🏆 лидирует</span>}
+          {aiPick && <span className="tag ai">🤖 выбор ИИ · {wish.aiScore}/10</span>}
           {now && <span>{timeAgo(wish.createdAt)}</span>}
           {wish.mine && <span className="tag">твоё</span>}
           {actions}

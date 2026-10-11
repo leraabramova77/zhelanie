@@ -98,7 +98,14 @@ function ModWishRow({ wish, showRestore }: { wish: ModWish; showRestore?: boolea
     <div className="mod-post">
       <div className="mod-post-main">
         <p className="mod-post-text">
-          {wish.text} {wish.hidden && <span className="tag danger">скрыто</span>}
+          {wish.text}{' '}
+          {wish.aiStatus === 'removed' ? (
+            <span className="tag danger">🤖 удалено ИИ: {wish.aiReason}</span>
+          ) : (
+            wish.hidden && <span className="tag danger">скрыто</span>
+          )}
+          {wish.aiStatus === 'pending' && <span className="tag">🤖 проверяется</span>}
+          {wish.aiScore && <span className="tag ai">🤖 {wish.aiScore}/10</span>}
         </p>
         <p className="muted small">
           {wish.authorName ?? 'удалённый пользователь'} · 👍 {wish.likes} 👎 {wish.dislikes}

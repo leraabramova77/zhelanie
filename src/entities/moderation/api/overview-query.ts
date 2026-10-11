@@ -16,6 +16,9 @@ export interface ModWish {
   dislikes: number;
   reports: number;
   reasons: string | null;
+  aiStatus: 'pending' | 'ok' | 'removed' | 'skipped';
+  aiScore: number | null;
+  aiReason: string | null;
 }
 
 export interface ModLogEntry {
@@ -71,6 +74,7 @@ export function useUsersQuery(query: string) {
 
 export const ACTION_LABEL: Record<string, string> = {
   delete_post: 'удалил(а) желание',
+  ai_remove: 'удалил желание',
   restore_post: 'оставил(а) желание после жалоб',
   add_word: 'добавил(а) запретное слово',
   remove_word: 'убрал(а) запретное слово',

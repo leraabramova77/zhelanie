@@ -11,6 +11,15 @@ export interface Wish {
   my: Vote;
   mine: boolean;
   reported: boolean;
+  aiScore: number | null; // оценка ИИ 1–10
+  aiComment: string | null;
+}
+
+export interface AiPick {
+  id: string;
+  text: string;
+  aiScore: number;
+  aiComment: string | null;
 }
 
 export interface Winner {
@@ -25,6 +34,7 @@ export interface Board {
   weekId: string;
   deadline: string;
   posts: Wish[];
+  aiTop: AiPick[]; // лучшие предложения недели по мнению ИИ
   previous: Pick<Wish, 'id' | 'text' | 'likes' | 'dislikes'>[];
   lastWinner: Winner | null;
   history: Winner[];

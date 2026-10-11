@@ -5,6 +5,7 @@ import { AuthDialog, SignInButton } from '@/features/auth';
 import { ProposeForm } from '@/features/propose-wish';
 import { isBackendConfigured } from '@/shared/config';
 import { errorMessage } from '@/shared/lib';
+import { AiPicks } from '@/widgets/ai-picks';
 import { Hero } from '@/widgets/hero';
 import { WinnerCard } from '@/widgets/winner-card';
 import { WinnersHistory } from '@/widgets/winners-history';
@@ -51,6 +52,7 @@ export function HomePage() {
                 <SignInButton variant="primary" />
               </section>
             )}
+            <AiPicks picks={data.aiTop} />
             <WishList board={data} />
             <WinnersHistory history={data.history} />
           </>

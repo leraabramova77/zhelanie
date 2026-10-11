@@ -53,6 +53,19 @@ create table if not exists posts (
   created_at timestamptz not null default now()
 );
 create unique index if not exists posts_week_text on posts (week_id, lower(text));
+
+-- ИИ-модератор: проверка и оценка каждого желания (Edge Function «ai»).
+alter table posts add column if not exists ai_status text not null default 'pending'
+  check (ai_status in ('pending', 'ok', 'removed', 'skipped'));
+alter table posts add column if not exists ai_score smallint check (ai_score between 1 and 10);
+alter table posts add column if not exists ai_reason text;
+alter table posts add column if not exists ai_comment text;
+alter table posts add column if not exists ai_attempts smallint not null default 0;
+create index if not exists posts_ai_pending on posts (ai_status) where ai_status = 'pending';
+
+-- Куда и с каким секретом база сообщает ИИ о новом желании (заполняется при установке, см. supabase/cron.sql).
+alter table app_settings add column if not exists ai_hook_url text not null default '';
+alter table app_settings add column if not exists ai_hook_secret text not null default '';
 create index if not exists posts_author on posts (author_id, week_id);
 
 create table if not exists votes (
@@ -238,6 +251,58 @@ begin
   end if;
 end $$;
 
+-- ---------- ИИ-модератор ----------
+
+-- После создания желания просим Edge Function «ai» проверить его. Если pg_net нет или вызов не удался —
+-- желание всё равно сохраняется, его подберёт плановая проверка (cron).
+create or replace function notify_ai() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare s app_settings;
+begin
+  select * into s from app_settings;
+  if s.ai_hook_url <> '' and to_regproc('net.http_post') is not null then
+    begin
+      execute 'select net.http_post(url := $1, headers := $2, body := $3)'
+        using s.ai_hook_url,
+              jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer ' || s.ai_hook_secret),
+              jsonb_build_object('postId', new.id);
+    exception when others then null;
+    end;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists posts_notify_ai on posts;
+create trigger posts_notify_ai after insert on posts for each row execute function notify_ai();
+
+-- Решение ИИ. «remove» скрывает желание (как будто удалено) и пишет в журнал — модератор может вернуть.
+create or replace function ai_apply(p_post uuid, p_verdict text, p_reason text, p_score int, p_comment text)
+returns text
+language plpgsql security definer set search_path = public as $$
+declare p posts;
+begin
+  select * into p from posts where id = p_post;
+  if p.id is null or p.ai_status <> 'pending' then return 'skip'; end if;
+  if p_verdict = 'remove' and not p.reviewed then
+    update posts set ai_status = 'removed', hidden = true, ai_reason = left(p_reason, 200),
+      ai_score = null, ai_comment = null where id = p_post;
+    perform log_action(null, 'ai_remove', format('«%s» — %s', p.text, coalesce(nullif(p_reason, ''), 'не подходит')));
+    return 'removed';
+  end if;
+  update posts set ai_status = 'ok', ai_reason = null,
+    ai_score = case when p_score between 1 and 10 then p_score end, ai_comment = left(p_comment, 200)
+  where id = p_post;
+  return 'ok';
+end $$;
+
+-- Ошибка ИИ (лимит, сбой) — пробуем ещё пару раз, потом оставляем желание людям.
+create or replace function ai_failed(p_post uuid) returns void
+language sql security definer set search_path = public as $$
+  update posts set ai_attempts = ai_attempts + 1,
+    ai_status = case when ai_attempts + 1 >= 3 then 'skipped' else ai_status end
+  where id = p_post and ai_status = 'pending'
+$$;
+
 -- ---------- Регистрация (вызывает Edge Function «account» с service role) ----------
 
 -- Проверки перед созданием аккаунта. Возвращает текст ошибки или null.
@@ -307,10 +372,12 @@ end $$;
 
 -- ---------- Чтение ----------
 
-create or replace function week_posts(p_week date, p_uid uuid, p_include_hidden boolean default false)
+drop function if exists week_posts(date, uuid, boolean);
+create function week_posts(p_week date, p_uid uuid, p_include_hidden boolean default false)
 returns table (
   id uuid, text text, created_at timestamptz, author_id uuid, author_name text, hidden boolean,
-  likes int, dislikes int, my int, reported boolean, reports int, report_reasons text
+  likes int, dislikes int, my int, reported boolean, reports int, report_reasons text,
+  ai_status text, ai_score smallint, ai_reason text, ai_comment text
 )
 language sql stable security definer set search_path = public as $$
   select p.id, p.text, p.created_at, p.author_id, pr.name, p.hidden,
@@ -319,7 +386,8 @@ language sql stable security definer set search_path = public as $$
     coalesce((select v.value from votes v where v.post_id = p.id and v.user_id = p_uid), 0)::int,
     exists (select 1 from reports r where r.post_id = p.id and r.user_id = p_uid),
     (select count(*) from reports r where r.post_id = p.id)::int,
-    (select string_agg(distinct r.reason, ', ') from reports r where r.post_id = p.id)
+    (select string_agg(distinct r.reason, ', ') from reports r where r.post_id = p.id),
+    p.ai_status, p.ai_score, p.ai_reason, p.ai_comment
   from posts p left join profiles pr on pr.id = p.author_id
   where p.week_id = p_week and (p_include_hidden or not p.hidden)
 $$;
@@ -347,9 +415,19 @@ begin
     'posts', coalesce((
       select jsonb_agg(jsonb_build_object(
         'id', w.id, 'text', w.text, 'createdAt', w.created_at, 'likes', w.likes, 'dislikes', w.dislikes,
-        'my', w.my, 'mine', coalesce(w.author_id = uid, false), 'reported', w.reported)
+        'my', w.my, 'mine', coalesce(w.author_id = uid, false), 'reported', w.reported,
+        'aiScore', w.ai_score, 'aiComment', w.ai_comment)
         order by w.likes - w.dislikes desc, w.likes desc, w.created_at)
       from week_posts(cur, uid) w), '[]'::jsonb),
+    -- Лучшие предложения недели по мнению ИИ (оценка 7+ из 10).
+    'aiTop', coalesce((
+      select jsonb_agg(jsonb_build_object('id', t.id, 'text', t.text, 'aiScore', t.ai_score, 'aiComment', t.ai_comment))
+      from (
+        select w.id, w.text, w.ai_score, w.ai_comment from week_posts(cur, uid) w
+        where w.ai_status = 'ok' and w.ai_score >= 7
+        order by w.ai_score desc, w.likes - w.dislikes desc, w.created_at
+        limit 3
+      ) t), '[]'::jsonb),
     'previous', coalesce((
       select jsonb_agg(jsonb_build_object('id', w.id, 'text', w.text, 'likes', w.likes, 'dislikes', w.dislikes)
         order by w.likes - w.dislikes desc, w.likes desc, w.created_at)
@@ -481,7 +559,9 @@ declare
   me profiles := require_role('moderator');
   p posts;
 begin
-  update posts set hidden = false, reviewed = true where id = p_post returning * into p;
+  update posts set hidden = false, reviewed = true,
+    ai_status = case when ai_status in ('removed', 'pending') then 'ok' else ai_status end
+  where id = p_post returning * into p;
   if p.id is null then raise exception 'Желание не найдено'; end if;
   delete from reports where post_id = p_post;
   perform log_action(me.id, 'restore_post', format('«%s»', p.text));
@@ -580,7 +660,8 @@ begin
     'queue', coalesce((
       select jsonb_agg(jsonb_build_object(
         'id', w.id, 'text', w.text, 'createdAt', w.created_at, 'authorId', w.author_id, 'authorName', w.author_name,
-        'hidden', w.hidden, 'likes', w.likes, 'dislikes', w.dislikes, 'reports', w.reports, 'reasons', w.report_reasons)
+        'hidden', w.hidden, 'likes', w.likes, 'dislikes', w.dislikes, 'reports', w.reports, 'reasons', w.report_reasons,
+        'aiStatus', w.ai_status, 'aiScore', w.ai_score, 'aiReason', w.ai_reason)
         order by w.hidden desc, w.reports desc)
       from (select * from week_posts(cur, null, true) union all select * from week_posts(cur - 7, null, true)) w
       join posts p on p.id = w.id
@@ -588,12 +669,13 @@ begin
     'posts', coalesce((
       select jsonb_agg(jsonb_build_object(
         'id', w.id, 'text', w.text, 'createdAt', w.created_at, 'authorId', w.author_id, 'authorName', w.author_name,
-        'hidden', w.hidden, 'likes', w.likes, 'dislikes', w.dislikes, 'reports', w.reports, 'reasons', w.report_reasons)
+        'hidden', w.hidden, 'likes', w.likes, 'dislikes', w.dislikes, 'reports', w.reports, 'reasons', w.report_reasons,
+        'aiStatus', w.ai_status, 'aiScore', w.ai_score, 'aiReason', w.ai_reason)
         order by w.likes - w.dislikes desc, w.created_at)
       from week_posts(cur, null, true) w), '[]'::jsonb),
     'words', coalesce((select jsonb_agg(word order by ltrim(word, '^')) from banned_words), '[]'::jsonb),
     'log', coalesce((
-      select jsonb_agg(jsonb_build_object('at', l.created_at, 'actor', pr.name, 'action', l.action, 'details', l.details)
+      select jsonb_agg(jsonb_build_object('at', l.created_at, 'actor', coalesce(pr.name, case when l.action like 'ai_%' then 'ИИ-модератор' end), 'action', l.action, 'details', l.details)
         order by l.created_at desc)
       from (select * from mod_log order by created_at desc limit 50) l left join profiles pr on pr.id = l.actor_id), '[]'::jsonb),
     'subscribers', (select count(*) from push_subscriptions)

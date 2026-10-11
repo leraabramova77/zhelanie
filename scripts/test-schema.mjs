@@ -201,6 +201,67 @@ await expectOk('победитель прошлой недели и удален
   assert(!(await postId('Очень старое')), 'старое не удалено');
 });
 
+console.log('ИИ-модератор');
+await expectOk('новое желание ждёт проверки ИИ', async () => {
+  await as('vova', `select create_post('Пицца в столовой по средам')`);
+  const [{ s }] = await as(null, `select ai_status s from posts where text = 'Пицца в столовой по средам'`);
+  assert(s === 'pending', s);
+});
+await expectOk('ИИ одобряет и оценивает → попадает в «лучшие по мнению ИИ»', async () => {
+  const id = await postId('Пицца в столовой по средам');
+  await db.query(`select ai_apply($1, 'ok', '', 9, 'Порадует всех и легко устроить')`, [id]);
+  const b = await board('kolya');
+  assert(b.aiTop[0]?.id === id && b.aiTop[0].aiScore === 9, JSON.stringify(b.aiTop));
+  assert(b.posts.find((p) => p.id === id).aiComment.includes('Порадует'), 'нет комментария');
+});
+await expectOk('ИИ удаляет мем → пропадает с сайта, видно модераторам, пишется в журнал', async () => {
+  await as('kolya', `select set_banned($1, false)`, [ids.kolya]).catch(() => {});
+  await db.exec(`update profiles set banned = false where id = '${ids.kolya}'`);
+  await as('kolya', `select create_post('ахахах кринж мем 228')`);
+  const id = await postId('ахахах кринж мем 228');
+  const [{ r }] = (await db.query(`select ai_apply($1, 'remove', 'мем', null, null) as r`, [id])).rows;
+  assert(r === 'removed', r);
+  assert(!(await board('vova')).posts.some((p) => p.id === id), 'видно на сайте');
+  await db.exec(`update profiles set role = 'moderator' where id = '${ids.masha}'`);
+  const [{ o }] = await as('masha', 'select mod_overview() as o');
+  const q = o.queue.find((p) => p.id === id);
+  assert(q?.aiStatus === 'removed' && q.aiReason === 'мем', JSON.stringify(q));
+  assert(
+    o.log.some((l) => l.action === 'ai_remove' && l.actor === 'ИИ-модератор'),
+    'нет записи в журнале',
+  );
+});
+await expectOk('модератор возвращает удалённое ИИ', async () => {
+  const id = await postId('ахахах кринж мем 228');
+  await as('masha', 'select restore_post($1)', [id]);
+  assert(
+    (await board('vova')).posts.some((p) => p.id === id),
+    'не вернулось',
+  );
+  const [{ s }] = await as(null, 'select ai_status s from posts where id = $1', [id]);
+  assert(s === 'ok', s);
+});
+await expectOk('после 3 сбоев ИИ желание остаётся людям', async () => {
+  await db.exec(`insert into posts (week_id, text, author_id) values (current_week(), 'Сбой ИИ тест', '${ids.lera}')`);
+  const id = await postId('Сбой ИИ тест');
+  for (let i = 0; i < 3; i++) await db.query('select ai_failed($1)', [id]);
+  const [{ s }] = await as(null, 'select ai_status s from posts where id = $1', [id]);
+  assert(s === 'skipped', s);
+  await db.query('delete from posts where id = $1', [id]);
+});
+await expectError(
+  'браузер не может вызвать ai_apply',
+  async () => {
+    await db.exec('set role authenticated');
+    try {
+      await db.query(`select ai_apply(gen_random_uuid(), 'remove', '', null, null)`);
+    } finally {
+      await db.exec('reset role');
+    }
+  },
+  'permission denied',
+);
+
 console.log('Регистрация и код школы');
 const check = async (login, name, code, ip = '1.1.1.1') =>
   (await db.query('select check_registration($1, $2, $3, $4) as e', [login, name, code, ip])).rows[0].e;
