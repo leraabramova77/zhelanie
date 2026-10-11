@@ -1,10 +1,14 @@
 // Публичные настройки сборки. Значения подставляются в код при `next build`.
+// В .env-файлах пустых значений не бывает: маркеры not-required / required-not-set означают «не задано».
+const PLACEHOLDERS = new Set(['not-required', 'required-not-set']);
+const read = (value: string | undefined) => (value && !PLACEHOLDERS.has(value.trim()) ? value.trim() : '');
+
 export const env = {
-  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
-  supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
-  vapidPublicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '',
-  schoolName: process.env.NEXT_PUBLIC_SCHOOL_NAME || 'Наша школа',
-  basePath: process.env.NEXT_PUBLIC_BASE_PATH ?? '',
+  supabaseUrl: read(process.env.NEXT_PUBLIC_SUPABASE_URL),
+  supabaseAnonKey: read(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+  vapidPublicKey: read(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY),
+  schoolName: read(process.env.NEXT_PUBLIC_SCHOOL_NAME) || 'Наша школа',
+  basePath: read(process.env.NEXT_PUBLIC_BASE_PATH),
 };
 
 export const isBackendConfigured = Boolean(env.supabaseUrl && env.supabaseAnonKey);

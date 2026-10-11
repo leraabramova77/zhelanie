@@ -2,7 +2,8 @@ import type { NextConfig } from 'next';
 
 // Сайт собирается в статику (папка out/) — для GitHub Pages и любого статического хостинга.
 // На GitHub Pages сайт живёт в подпапке /<репозиторий>, её передаём через NEXT_PUBLIC_BASE_PATH.
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+const rawBasePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+const basePath = ['not-required', 'required-not-set'].includes(rawBasePath) ? '' : rawBasePath;
 
 const nextConfig: NextConfig = {
   output: 'export',
