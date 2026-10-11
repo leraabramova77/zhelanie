@@ -2,13 +2,18 @@ import type { AiPick } from '@/entities/wish';
 
 // Топ‑3 предложений недели по оценке ИИ-модератора (полезность для учеников и реальность исполнения).
 export function AiPicks({ picks }: { picks: AiPick[] }) {
-  if (picks.length === 0) return null;
   return (
     <section className="ai-picks">
       <div className="ai-picks-head">
         <span className="badge">🤖 Лучшие предложения по мнению ИИ</span>
         <span className="ai-picks-note">польза для учеников и реальность</span>
       </div>
+      {picks.length === 0 && (
+        <p className="ai-picks-empty">
+          ИИ-модератор читает каждое новое желание: убирает мат, мемы и всё не по теме, а лучшие идеи (7 из 10 и выше)
+          показывает здесь. Пока оценивать нечего — предложи первое желание!
+        </p>
+      )}
       <ol className="ai-picks-list">
         {picks.map((p) => (
           <li key={p.id}>

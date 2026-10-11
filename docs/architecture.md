@@ -81,7 +81,7 @@ src/
 | `mod_overview()` | модератор | Очередь, желания недели, слова, журнал, число подписчиков |
 | `save_push_subscription` / `remove_push_subscription` | все | Подписка на push |
 | `maintain()` | cron | Победитель и очистка |
-| `ai_apply` / `ai_failed` | Edge Function `ai` | Решение ИИ: оставить с оценкой или скрыть с причиной |
+| `ai_apply` / `ai_failed` | Edge Function `ai` | Решение ИИ: оставить с оценкой или удалить полностью (с записью в журнал) |
 
 ### Фоновые задачи
 

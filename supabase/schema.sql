@@ -20,6 +20,8 @@ create table if not exists app_settings (
 insert into app_settings default values on conflict do nothing;
 -- Код школы: без него нельзя зарегистрироваться. Президент меняет его в разделе модерации.
 alter table app_settings add column if not exists school_code text not null default '';
+-- Лимит желаний в неделю для президента (у учеников и модераторов — max_posts_per_week).
+alter table app_settings add column if not exists president_posts_per_week int not null default 5;
 
 create table if not exists app_meta (key text primary key);
 
@@ -193,6 +195,12 @@ language sql security definer set search_path = public as $$
   insert into mod_log (actor_id, action, details) values (p_actor, p_action, p_details)
 $$;
 
+-- Сколько желаний в неделю можно предложить с этой ролью.
+create or replace function posts_limit(p_role text) returns int
+language sql stable security definer set search_path = public as $$
+  select case when p_role = 'president' then president_posts_per_week else max_posts_per_week end from app_settings
+$$;
+
 -- ---------- Фильтр запрещённых слов ----------
 
 -- Приводит текст к единому виду: строчные, ё→е, латинские «двойники» и цифры → кириллица,
@@ -262,7 +270,7 @@ begin
   select * into s from app_settings;
   if s.ai_hook_url <> '' and to_regproc('net.http_post') is not null then
     begin
-      execute 'select net.http_post(url := $1, headers := $2, body := $3)'
+      execute 'select net.http_post(url := $1, headers := $2, body := $3, timeout_milliseconds := 60000)'
         using s.ai_hook_url,
               jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer ' || s.ai_hook_secret),
               jsonb_build_object('postId', new.id);
@@ -275,7 +283,8 @@ end $$;
 drop trigger if exists posts_notify_ai on posts;
 create trigger posts_notify_ai after insert on posts for each row execute function notify_ai();
 
--- Решение ИИ. «remove» скрывает желание (как будто удалено) и пишет в журнал — модератор может вернуть.
+-- Решение ИИ. «remove» — желание удаляется полностью (ничего не показывается на его месте),
+-- в журнал модерации пишется текст и причина. «ok» — сохраняем оценку и комментарий.
 create or replace function ai_apply(p_post uuid, p_verdict text, p_reason text, p_score int, p_comment text)
 returns text
 language plpgsql security definer set search_path = public as $$
@@ -284,9 +293,9 @@ begin
   select * into p from posts where id = p_post;
   if p.id is null or p.ai_status <> 'pending' then return 'skip'; end if;
   if p_verdict = 'remove' and not p.reviewed then
-    update posts set ai_status = 'removed', hidden = true, ai_reason = left(p_reason, 200),
-      ai_score = null, ai_comment = null where id = p_post;
-    perform log_action(null, 'ai_remove', format('«%s» — %s', p.text, coalesce(nullif(p_reason, ''), 'не подходит')));
+    delete from posts where id = p_post;
+    perform log_action(null, 'ai_remove', format('«%s» — %s (автор: %s)', p.text,
+      coalesce(nullif(p_reason, ''), 'не подходит'), (select name from profiles where id = p.author_id)));
     return 'removed';
   end if;
   update posts set ai_status = 'ok', ai_reason = null,
@@ -416,7 +425,7 @@ begin
       select jsonb_agg(jsonb_build_object(
         'id', w.id, 'text', w.text, 'createdAt', w.created_at, 'likes', w.likes, 'dislikes', w.dislikes,
         'my', w.my, 'mine', coalesce(w.author_id = uid, false), 'reported', w.reported,
-        'aiScore', w.ai_score, 'aiComment', w.ai_comment)
+        'aiScore', w.ai_score, 'aiComment', w.ai_comment, 'aiPending', w.ai_status = 'pending')
         order by w.likes - w.dislikes desc, w.likes desc, w.created_at)
       from week_posts(cur, uid) w), '[]'::jsonb),
     -- Лучшие предложения недели по мнению ИИ (оценка 7+ из 10).
@@ -439,8 +448,8 @@ begin
       select jsonb_agg(jsonb_build_object('weekId', week_id, 'text', text, 'likes', likes, 'dislikes', dislikes)
         order by week_id desc)
       from winners), '[]'::jsonb),
-    'postsLeft', case when uid is null then 0 else greatest(0, s.max_posts_per_week - mine) end,
-    'maxPerWeek', s.max_posts_per_week
+    'postsLeft', case when uid is null then 0 else greatest(0, posts_limit(me.role) - mine) end,
+    'maxPerWeek', coalesce(posts_limit(me.role), s.max_posts_per_week)
   );
 end $$;
 
@@ -466,8 +475,10 @@ begin
     raise exception 'В желании есть запрещённое слово — переформулируй, пожалуйста';
   end if;
   select count(*) into n from posts where week_id = cur and author_id = me.id;
-  if n >= s.max_posts_per_week then
-    raise exception 'Твоё желание на эту неделю уже есть. Следующее можно предложить с понедельника!';
+  if n >= posts_limit(me.role) then
+    raise exception '%', case when posts_limit(me.role) = 1
+      then 'Твоё желание на эту неделю уже есть. Следующее можно предложить с понедельника!'
+      else format('На этой неделе ты уже предложил(а) %s из %s желаний. Следующие — с понедельника!', n, posts_limit(me.role)) end;
   end if;
   insert into posts (week_id, text, author_id) values (cur, t, me.id) returning id into new_id;
   return jsonb_build_object('id', new_id);

@@ -27,6 +27,7 @@ export function WishCard({ wish, place, leader, aiPick, votes, actions, footer }
         <div className="post-meta">
           {leader && <span className="tag lead">🏆 лидирует</span>}
           {aiPick && <span className="tag ai">🤖 выбор ИИ · {wish.aiScore}/10</span>}
+          {wish.aiPending && <span className="tag">🤖 проверяется</span>}
           {now && <span>{timeAgo(wish.createdAt)}</span>}
           {wish.mine && <span className="tag">твоё</span>}
           {actions}

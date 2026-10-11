@@ -13,6 +13,7 @@ export interface Wish {
   reported: boolean;
   aiScore: number | null; // оценка ИИ 1–10
   aiComment: string | null;
+  aiPending: boolean; // ИИ ещё проверяет
 }
 
 export interface AiPick {

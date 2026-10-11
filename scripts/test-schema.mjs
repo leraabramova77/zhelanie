@@ -99,6 +99,20 @@ await expectOk('«рубля» и «хлебать» не срабатывают
 );
 await expectError('аноним не может предлагать', () => as(null, `select create_post('Тест')`), 'Войди');
 
+await expectOk('президенту можно 5 желаний в неделю, ученику — одно', async () => {
+  for (let i = 1; i <= 5; i++) await as('lera', `select create_post('Президентское желание номер ${i}')`);
+  const b = await board('lera');
+  assert(b.postsLeft === 0 && b.maxPerWeek === 5, JSON.stringify({ left: b.postsLeft, max: b.maxPerWeek }));
+  try {
+    await as('lera', `select create_post('Шестое желание президента')`);
+    throw new Error('прошло шестое');
+  } catch (e) {
+    assert(e.message.includes('5 из 5'), e.message);
+  }
+  assert((await board('vova')).maxPerWeek === 1, 'у ученика не 1');
+  await db.query("delete from posts where text like 'Президентское желание%'");
+});
+
 console.log('Голоса');
 const p1 = await postId('Каждую пятницу — свободная форма');
 await expectOk('лайк и смена голоса', async () => {
@@ -214,32 +228,27 @@ await expectOk('ИИ одобряет и оценивает → попадает
   assert(b.aiTop[0]?.id === id && b.aiTop[0].aiScore === 9, JSON.stringify(b.aiTop));
   assert(b.posts.find((p) => p.id === id).aiComment.includes('Порадует'), 'нет комментария');
 });
-await expectOk('ИИ удаляет мем → пропадает с сайта, видно модераторам, пишется в журнал', async () => {
-  await as('kolya', `select set_banned($1, false)`, [ids.kolya]).catch(() => {});
+await expectOk('ИИ удаляет мем полностью: на сайте ничего, в журнале запись', async () => {
   await db.exec(`update profiles set banned = false where id = '${ids.kolya}'`);
   await as('kolya', `select create_post('ахахах кринж мем 228')`);
   const id = await postId('ахахах кринж мем 228');
   const [{ r }] = (await db.query(`select ai_apply($1, 'remove', 'мем', null, null) as r`, [id])).rows;
   assert(r === 'removed', r);
-  assert(!(await board('vova')).posts.some((p) => p.id === id), 'видно на сайте');
+  assert(!(await postId('ахахах кринж мем 228')), 'желание осталось в базе');
+  const b = await board('kolya');
+  assert(!('myRemoved' in b) && b.postsLeft === 1, JSON.stringify({ left: b.postsLeft }));
   await db.exec(`update profiles set role = 'moderator' where id = '${ids.masha}'`);
   const [{ o }] = await as('masha', 'select mod_overview() as o');
-  const q = o.queue.find((p) => p.id === id);
-  assert(q?.aiStatus === 'removed' && q.aiReason === 'мем', JSON.stringify(q));
+  assert(!o.queue.some((p) => p.text.includes('кринж')), 'висит в очереди');
   assert(
-    o.log.some((l) => l.action === 'ai_remove' && l.actor === 'ИИ-модератор'),
+    o.log.some((l) => l.action === 'ai_remove' && l.actor === 'ИИ-модератор' && l.details.includes('мем')),
     'нет записи в журнале',
   );
 });
-await expectOk('модератор возвращает удалённое ИИ', async () => {
-  const id = await postId('ахахах кринж мем 228');
-  await as('masha', 'select restore_post($1)', [id]);
-  assert(
-    (await board('vova')).posts.some((p) => p.id === id),
-    'не вернулось',
-  );
-  const [{ s }] = await as(null, 'select ai_status s from posts where id = $1', [id]);
-  assert(s === 'ok', s);
+await expectOk('после удаления ИИ можно предложить другое', async () => {
+  await as('kolya', `select create_post('Больше розеток в классах')`);
+  assert((await board('kolya')).postsLeft === 0, 'лимит не учёлся');
+  await db.query("delete from posts where text = 'Больше розеток в классах'");
 });
 await expectOk('после 3 сбоев ИИ желание остаётся людям', async () => {
   await db.exec(`insert into posts (week_id, text, author_id) values (current_week(), 'Сбой ИИ тест', '${ids.lera}')`);

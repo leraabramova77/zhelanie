@@ -888,6 +888,14 @@ a {
   font-size: 0.88rem;
   opacity: 0.9;
 }
+.ai-picks-empty {
+  margin: 12px 0 0;
+  font-size: 0.92rem;
+  opacity: 0.95;
+}
+.ai-picks-list:empty {
+  display: none;
+}
 .ai-picks-foot {
   margin: 12px 0 0;
   font-size: 0.8rem;

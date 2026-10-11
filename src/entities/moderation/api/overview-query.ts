@@ -16,7 +16,7 @@ export interface ModWish {
   dislikes: number;
   reports: number;
   reasons: string | null;
-  aiStatus: 'pending' | 'ok' | 'removed' | 'skipped';
+  aiStatus: 'pending' | 'ok' | 'skipped';
   aiScore: number | null;
   aiReason: string | null;
 }

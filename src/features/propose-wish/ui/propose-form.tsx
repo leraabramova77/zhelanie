@@ -17,6 +17,8 @@ export function ProposeForm({ board }: { board: Board }) {
     mutationFn: (value: string) => rpc('create_post', { p_text: value }),
     onSuccess: () => {
       setText('');
+      // ИИ проверяет желание 5–10 секунд — подтягиваем его решение, не дожидаясь обычного обновления.
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: boardKeys.all }), 12_000);
       toast('Желание добавлено! Зови друзей голосовать 🎉');
     },
     onError: (e) => toast(errorMessage(e)),
@@ -35,8 +37,16 @@ export function ProposeForm({ board }: { board: Board }) {
   if (board.postsLeft <= 0) {
     return (
       <section className="card done-card">
-        <h2>Твоё желание на этой неделе уже отправлено ✅</h2>
-        <p className="muted">Каждый может предложить одно желание в неделю. Следующее — с понедельника.</p>
+        <h2>
+          {board.maxPerWeek > 1
+            ? 'Все желания на эту неделю отправлены ✅'
+            : 'Твоё желание на этой неделе уже отправлено ✅'}
+        </h2>
+        <p className="muted">
+          {board.maxPerWeek > 1
+            ? `Тебе можно предложить ${board.maxPerWeek} желаний в неделю. Следующие — с понедельника.`
+            : 'Каждый может предложить одно желание в неделю. Следующее — с понедельника.'}
+        </p>
       </section>
     );
   }
@@ -60,7 +70,9 @@ export function ProposeForm({ board }: { board: Board }) {
         />
         <div className="form-row">
           <span className="muted small">
-            {text.length} / {MAX} · одно желание в неделю, без мата и ссылок
+            {text.length} / {MAX} ·{' '}
+            {board.maxPerWeek > 1 ? `осталось ${board.postsLeft} из ${board.maxPerWeek}` : 'одно желание в неделю'}, без
+            мата и ссылок
           </span>
           <button className="btn" type="submit" disabled={create.isPending || text.trim().length < MIN}>
             Отправить

@@ -17,7 +17,8 @@ select cron.schedule('wish-ai-pending', '*/10 * * * *', $$
   select net.http_post(
     url := '{{PROJECT_URL}}/functions/v1/ai',
     headers := '{"Content-Type": "application/json", "Authorization": "Bearer {{CRON_SECRET}}"}'::jsonb,
-    body := '{"pending": true}'::jsonb)
+    body := '{"pending": true}'::jsonb,
+    timeout_milliseconds := 120000)
 $$);
 
 select cron.schedule('wish-remind-mon', '0 5 * * 1', $$
