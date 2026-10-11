@@ -1,0 +1,35 @@
+{
+  "name": "wish-of-the-week",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Школьный сайт: каждую неделю ученики выбирают одно желание",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test:sql": "node scripts/test-schema.mjs",
+    "check": "npm run lint && npm run typecheck && npm run test:sql"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
+    "@tanstack/react-query": "^5.104.1",
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@electric-sql/pglite": "^0.5.8",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5",
+    "web-push": "^3.6.7"
+  }
+}
