@@ -61,7 +61,7 @@ export function ModerationPanel({ data, myId }: { data: ModOverview; myId?: stri
       )}
 
       {tab === 'words' && <BannedWordsEditor words={data.words} />}
-      {tab === 'people' && <UserManager myRole={data.role} myId={myId} />}
+      {tab === 'people' && <UserManager myRole={data.role} myId={myId} people={data.people} />}
 
       {tab === 'log' && (
         <section className="card">

@@ -197,6 +197,20 @@ await expectOk('журнал записывает действия', async () =>
   for (const a of ['set_role', 'restore_post', 'delete_post', 'ban', 'add_word'])
     assert(actions.includes(a), `нет ${a}`);
 });
+await expectOk('президент видит, кто и когда заходил; модератор — нет', async () => {
+  const [{ u }] = await as('lera', `select search_users('') as u`);
+  const masha = u.find((x) => x.login === 'masha');
+  assert(masha.registeredAt && masha.lastSeenAt, JSON.stringify(masha));
+  const [{ o }] = await as('lera', 'select mod_overview() as o');
+  assert(o.people.total === 5 && o.people.today >= 1, JSON.stringify(o.people));
+  const [{ u: forMod }] = await as('masha', `select search_users('') as u`);
+  assert(
+    forMod.every((x) => x.lastSeenAt === null && x.registeredAt === null),
+    'модератор видит даты',
+  );
+  const [{ o: modO }] = await as('masha', 'select mod_overview() as o');
+  assert(modO.people === null, 'модератор видит сводку');
+});
 await expectOk('президент снимает модератора', () => as('lera', `select set_role($1, 'member')`, [ids.masha]));
 
 console.log('Итоги недели и очистка');

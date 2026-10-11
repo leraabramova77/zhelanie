@@ -2,14 +2,20 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDeferredValue, useState } from 'react';
-import { type ModUser, modKeys, useUsersQuery } from '@/entities/moderation';
+import { type ModOverview, type ModUser, modKeys, useUsersQuery } from '@/entities/moderation';
 import { canManageRoles, ROLE_LABEL, type Role, RoleBadge } from '@/entities/user';
 import { invokeFunction, rpc } from '@/shared/api';
-import { errorMessage, plural } from '@/shared/lib';
+import { dateTime, errorMessage, plural, timeAgo } from '@/shared/lib';
 import { toast } from '@/shared/ui';
 
 // Президент назначает и снимает модераторов. Модераторы и президент блокируют учеников и выдают временные пароли.
-export function UserManager({ myRole, myId }: { myRole: Role; myId?: string }) {
+interface Props {
+  myRole: Role;
+  myId?: string;
+  people?: ModOverview['people'];
+}
+
+export function UserManager({ myRole, myId, people }: Props) {
   const [query, setQuery] = useState('');
   const [issued, setIssued] = useState<{ name: string; login: string | null; password: string } | null>(null);
   const deferred = useDeferredValue(query.trim());
@@ -46,6 +52,26 @@ export function UserManager({ myRole, myId }: { myRole: Role; myId?: string }) {
   return (
     <section className="card">
       <h2>Люди</h2>
+      {people && (
+        <div className="people-stats">
+          <div>
+            <b>{people.total}</b>
+            <small>всего в системе</small>
+          </div>
+          <div>
+            <b>{people.today}</b>
+            <small>заходили сегодня</small>
+          </div>
+          <div>
+            <b>{people.week}</b>
+            <small>за неделю</small>
+          </div>
+          <div>
+            <b>{people.newThisWeek}</b>
+            <small>новых за неделю</small>
+          </div>
+        </div>
+      )}
       <p className="muted small">
         {president
           ? 'Ты президент: назначаешь и снимаешь модераторов, блокируешь учеников, выдаёшь временные пароли.'
@@ -82,6 +108,8 @@ export function UserManager({ myRole, myId }: { myRole: Role; myId?: string }) {
               <div className="muted small">
                 {u.login ? `${u.login} · ` : ''}
                 {ROLE_LABEL[u.role]} · {u.posts} {plural(u.posts, ['желание', 'желания', 'желаний'])}
+                {u.registeredAt && ` · с нами с ${dateTime(u.registeredAt)}`}
+                {u.lastSeenAt && ` · заходил(а) ${timeAgo(u.lastSeenAt)}`}
               </div>
             </div>
             <div className="user-actions">

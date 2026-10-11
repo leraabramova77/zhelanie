@@ -38,6 +38,8 @@ create table if not exists profiles (
 );
 
 create unique index if not exists profiles_login on profiles (lower(login));
+-- Когда человек последний раз открывал сайт (обновляется при загрузке доски).
+alter table profiles add column if not exists last_seen_at timestamptz;
 
 create table if not exists signup_log (
   ip text not null,
@@ -158,19 +160,21 @@ begin
   if u.id is null then return null; end if;
   m := coalesce(u.raw_user_meta_data, '{}'::jsonb);
   l := m->>'user_name';
-  insert into profiles as pr (id, name, login, avatar, role)
+  insert into profiles as pr (id, name, login, avatar, role, last_seen_at)
   values (
     u.id,
     left(coalesce(nullif(m->>'full_name', ''), nullif(m->>'name', ''), l, split_part(u.email, '@', 1), 'Ученик'), 60),
     l,
     m->>'avatar_url',
-    case when lower(l) = any (select lower(unnest(president_logins)) from app_settings) then 'president' else 'member' end
+    case when lower(l) = any (select lower(unnest(president_logins)) from app_settings) then 'president' else 'member' end,
+    now()
   )
   on conflict (id) do update set
     name = excluded.name,
     login = excluded.login,
     avatar = excluded.avatar,
-    role = case when excluded.role = 'president' then 'president' else pr.role end
+    role = case when excluded.role = 'president' then 'president' else pr.role end,
+    last_seen_at = now()
   returning * into p;
   return p;
 end $$;
@@ -605,15 +609,19 @@ declare
   me profiles := require_role('moderator');
   q text := btrim(coalesce(p_query, ''));
 begin
+  -- Даты регистрации и последнего визита видит только президент.
   return coalesce((
-    select jsonb_agg(to_jsonb(x) order by role_rank(x.role) desc, x.name)
+    select jsonb_agg(to_jsonb(x) order by role_rank(x.role) desc, x.seen desc nulls last, x.name)
     from (
       select pr.id, pr.name, pr.login, pr.avatar, pr.role, pr.banned,
-        (select count(*) from posts where author_id = pr.id)::int as posts
+        (select count(*) from posts where author_id = pr.id)::int as posts,
+        case when me.role = 'president' then pr.created_at end as "registeredAt",
+        case when me.role = 'president' then pr.last_seen_at end as "lastSeenAt",
+        pr.last_seen_at as seen
       from profiles pr
       where q = '' or pr.name ilike '%' || q || '%' or pr.login ilike '%' || q || '%'
-      order by role_rank(pr.role) desc, pr.name
-      limit 50
+      order by role_rank(pr.role) desc, pr.last_seen_at desc nulls last, pr.name
+      limit 300
     ) x), '[]'::jsonb);
 end $$;
 
@@ -689,7 +697,14 @@ begin
       select jsonb_agg(jsonb_build_object('at', l.created_at, 'actor', coalesce(pr.name, case when l.action like 'ai_%' then 'ИИ-модератор' end), 'action', l.action, 'details', l.details)
         order by l.created_at desc)
       from (select * from mod_log order by created_at desc limit 50) l left join profiles pr on pr.id = l.actor_id), '[]'::jsonb),
-    'subscribers', (select count(*) from push_subscriptions)
+    'subscribers', (select count(*) from push_subscriptions),
+    -- Сводка по людям — только президенту.
+    'people', case when me.role = 'president' then jsonb_build_object(
+      'total', (select count(*) from profiles),
+      'today', (select count(*) from profiles where last_seen_at > now() - interval '1 day'),
+      'week', (select count(*) from profiles where last_seen_at > now() - interval '7 days'),
+      'newThisWeek', (select count(*) from profiles where created_at >= voting_deadline() - interval '7 days')
+    ) end
   );
 end $$;
 

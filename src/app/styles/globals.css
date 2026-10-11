@@ -828,6 +828,33 @@ a {
   overflow-wrap: anywhere;
 }
 
+.people-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.people-stats div {
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--primary-soft);
+  text-align: center;
+}
+.people-stats b {
+  display: block;
+  font: 800 1.3rem / 1.2 var(--font-head);
+  color: var(--primary);
+}
+.people-stats small {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+@media (max-width: 540px) {
+  .people-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 /* ---------- ИИ ---------- */
 
 .tag.ai {

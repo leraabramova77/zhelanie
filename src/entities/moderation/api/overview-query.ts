@@ -37,6 +37,8 @@ export interface ModOverview {
   words: string[];
   log: ModLogEntry[];
   subscribers: number;
+  // Сводка по людям — приходит только президенту.
+  people: { total: number; today: number; week: number; newThisWeek: number } | null;
 }
 
 export interface ModUser {
@@ -47,6 +49,8 @@ export interface ModUser {
   role: Role;
   banned: boolean;
   posts: number;
+  registeredAt: string | null; // только для президента
+  lastSeenAt: string | null; // только для президента
 }
 
 export const modKeys = {
