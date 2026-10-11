@@ -855,6 +855,61 @@ a {
   }
 }
 
+/* ---------- Кабинет президента ---------- */
+
+.wrap-wide {
+  max-width: 1120px;
+}
+.admin-links {
+  display: flex;
+  gap: 14px;
+}
+.president-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 20px;
+  align-items: start;
+}
+.chip-gold {
+  background: var(--sun);
+  color: #18171f;
+}
+.chip-gold:hover {
+  background: #ffe07a;
+}
+.user-num {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.role-select select {
+  height: 34px;
+  padding: 0 10px;
+  font-size: 0.85rem;
+  border-radius: 10px;
+  width: auto;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+@media (max-width: 900px) {
+  .president-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---------- ИИ ---------- */
 
 .tag.ai {

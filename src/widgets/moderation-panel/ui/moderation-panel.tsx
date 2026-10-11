@@ -2,20 +2,16 @@
 
 import { useState } from 'react';
 import { ACTION_LABEL, type ModOverview, type ModWish } from '@/entities/moderation';
-import { canManageRoles } from '@/entities/user';
 import { BannedWordsEditor } from '@/features/banned-words';
-import { BroadcastForm } from '@/features/broadcast';
 import { useDeleteWish } from '@/features/delete-wish';
 import { UserManager } from '@/features/manage-user';
 import { useRestoreWish } from '@/features/restore-wish';
-import { SchoolCodeForm } from '@/features/school-code';
 import { dateTime, plural } from '@/shared/lib';
 import { ReasonPicker } from '@/shared/ui';
 import { type ModTab, useModTab } from '../model/store';
 
 export function ModerationPanel({ data, myId }: { data: ModOverview; myId?: string }) {
   const { tab, setTab } = useModTab();
-  const president = canManageRoles(data.role);
 
   const tabs: [ModTab, string][] = [
     ['queue', `Жалобы${data.queue.length ? ` · ${data.queue.length}` : ''}`],
@@ -24,7 +20,6 @@ export function ModerationPanel({ data, myId }: { data: ModOverview; myId?: stri
     ['people', 'Люди'],
     ['log', 'Журнал'],
   ];
-  if (president) tabs.push(['broadcast', 'Президент']);
 
   return (
     <div className="stack">
@@ -77,13 +72,6 @@ export function ModerationPanel({ data, myId }: { data: ModOverview; myId?: stri
             ))}
           </ul>
         </section>
-      )}
-
-      {tab === 'broadcast' && president && (
-        <>
-          <SchoolCodeForm current={data.schoolCode ?? ''} />
-          <BroadcastForm subscribers={data.subscribers} />
-        </>
       )}
     </div>
   );

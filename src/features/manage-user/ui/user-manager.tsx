@@ -100,9 +100,10 @@ export function UserManager({ myRole, myId, people }: Props) {
         style={{ marginTop: 12 }}
       />
       {users.isLoading && <p className="muted small">Загрузка…</p>}
-      <ul className="user-list">
-        {users.data?.map((u: ModUser) => (
+      <ol className="user-list">
+        {users.data?.map((u: ModUser, i) => (
           <li key={u.id} className="user-row">
+            <span className="user-num">{i + 1}</span>
             <div className="user-info">
               <b>{u.name}</b> <RoleBadge role={u.role} /> {u.banned && <span className="tag danger">заблокирован</span>}
               <div className="muted small">
@@ -114,13 +115,18 @@ export function UserManager({ myRole, myId, people }: Props) {
             </div>
             <div className="user-actions">
               {president && u.role !== 'president' && (
-                <button
-                  type="button"
-                  className="btn btn-small"
-                  onClick={() => setRole.mutate({ id: u.id, role: u.role === 'moderator' ? 'member' : 'moderator' })}
-                >
-                  {u.role === 'moderator' ? 'Снять модератора' : 'Сделать модератором'}
-                </button>
+                <label className="role-select">
+                  <span className="sr-only">Ранг</span>
+                  <select
+                    className="input"
+                    value={u.role}
+                    disabled={setRole.isPending}
+                    onChange={(e) => setRole.mutate({ id: u.id, role: e.target.value as 'member' | 'moderator' })}
+                  >
+                    <option value="member">🎒 Ученик</option>
+                    <option value="moderator">🛡️ Модератор</option>
+                  </select>
+                </label>
               )}
               {canReset(u) && (
                 <button type="button" className="btn btn-small btn-ghost" onClick={() => resetPassword.mutate(u)}>
@@ -139,7 +145,7 @@ export function UserManager({ myRole, myId, people }: Props) {
             </div>
           </li>
         ))}
-      </ul>
+      </ol>
       {users.data?.length === 0 && <p className="muted">Никого не нашли</p>}
     </section>
   );

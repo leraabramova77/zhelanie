@@ -30,6 +30,11 @@ export function UserMenu({ me }: { me: Profile }) {
   const open = useAuthDialog((s) => s.open);
   return (
     <div className="userbar">
+      {me.role === 'president' && (
+        <Link href="/president/" className="chip chip-gold">
+          👑 Президент
+        </Link>
+      )}
       {canModerate(me.role) && (
         <Link href="/moderation/" className="chip">
           Модерация
