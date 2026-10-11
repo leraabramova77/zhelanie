@@ -828,6 +828,97 @@ a {
   overflow-wrap: anywhere;
 }
 
+/* ---------- Вход и регистрация ---------- */
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: rgba(17, 16, 24, 0.55);
+  overflow-y: auto;
+  animation: pop 0.15s ease-out;
+}
+.dialog-dismiss {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+.dialog {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+}
+.dialog h2 {
+  margin-bottom: 16px;
+}
+.dialog-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.dialog-close:hover {
+  background: var(--bg);
+}
+.dialog-tabs {
+  margin: 0 44px 18px 0;
+}
+.dialog-tabs button {
+  flex: 1;
+}
+.field {
+  display: grid;
+  gap: 6px;
+}
+.field > span {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.field small {
+  font-size: 0.8rem;
+}
+.center {
+  text-align: center;
+}
+.auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+.btn-ghost {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.school-code {
+  margin: 10px 0 !important;
+  font: 800 1.3rem / 1.2 var(--font-head);
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+.issued {
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--up-soft);
+}
+.issued p {
+  margin: 0;
+}
+
 /* ---------- Мобильные ---------- */
 
 @media (max-width: 540px) {

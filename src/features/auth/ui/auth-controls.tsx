@@ -1,22 +1,33 @@
 'use client';
 
 import Link from 'next/link';
-import { signInWithGitHub, signOut } from '@/entities/session';
+import { signOut } from '@/entities/session';
 import { canModerate, type Profile, RoleBadge } from '@/entities/user';
-import { errorMessage } from '@/shared/lib';
-import { GitHubIcon, toast } from '@/shared/ui';
-
-const startSignIn = () => signInWithGitHub().catch((e) => toast(errorMessage(e)));
+import { useAuthDialog } from '../model/store';
 
 export function SignInButton({ variant = 'chip' }: { variant?: 'chip' | 'primary' }) {
+  const open = useAuthDialog((s) => s.open);
+  if (variant === 'chip') {
+    return (
+      <button type="button" className="chip" onClick={() => open('login')}>
+        Войти
+      </button>
+    );
+  }
   return (
-    <button type="button" className={variant === 'chip' ? 'chip' : 'btn'} onClick={startSignIn}>
-      <GitHubIcon /> {variant === 'chip' ? 'Войти' : 'Войти через GitHub'}
-    </button>
+    <div className="auth-actions">
+      <button type="button" className="btn" onClick={() => open('register')}>
+        Зарегистрироваться
+      </button>
+      <button type="button" className="btn btn-ghost" onClick={() => open('login')}>
+        У меня есть аккаунт
+      </button>
+    </div>
   );
 }
 
 export function UserMenu({ me }: { me: Profile }) {
+  const open = useAuthDialog((s) => s.open);
   return (
     <div className="userbar">
       {canModerate(me.role) && (
@@ -24,14 +35,14 @@ export function UserMenu({ me }: { me: Profile }) {
           Модерация
         </Link>
       )}
-      {me.avatar && <img src={me.avatar} alt="" className="avatar" width={28} height={28} />}
       <span className="username">{me.name}</span>
       <RoleBadge role={me.role} />
+      <button type="button" className="chip" onClick={() => open('password')}>
+        Пароль
+      </button>
       <button type="button" className="chip" onClick={() => signOut()}>
         Выйти
       </button>
     </div>
   );
 }
-
-export { startSignIn };

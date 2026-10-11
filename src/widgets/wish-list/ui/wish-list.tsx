@@ -2,7 +2,7 @@
 
 import { canModerate } from '@/entities/user';
 import { type Board, type Wish, WishCard } from '@/entities/wish';
-import { startSignIn } from '@/features/auth';
+import { openSignIn } from '@/features/auth';
 import { useDeleteWish } from '@/features/delete-wish';
 import { useReportWish } from '@/features/report-wish';
 import { VoteButtons } from '@/features/vote-wish';
@@ -130,7 +130,7 @@ function WishRow({ wish, board, place, leader }: { wish: Wish; board: Board; pla
       leader={leader}
       actions={actions}
       footer={footer}
-      votes={<VoteButtons wish={wish} onUnauthorized={me ? undefined : startSignIn} />}
+      votes={<VoteButtons wish={wish} onUnauthorized={me ? undefined : openSignIn} />}
     />
   );
 }

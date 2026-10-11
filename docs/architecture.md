@@ -8,7 +8,7 @@
 | Данные | TanStack Query 5 | Кэш, рефетч каждые 30 с, оптимистичные голоса |
 | Состояние UI | Zustand 5 | Сессия, тосты, сортировка, открытые панели, вкладки модерации |
 | Бэкенд | Supabase: Postgres + Auth + Edge Functions + pg_cron | Без своего сервера, бесплатно |
-| Вход | Supabase Auth → GitHub OAuth (PKCE) | |
+| Вход | Supabase Auth: логин + пароль, регистрация через Edge Function `account` | Без почты и сторонних аккаунтов |
 | Уведомления | Web Push (VAPID) через Edge Function `push` | |
 | Линтер и форматтер | Biome 2 | Одна утилита вместо ESLint + Prettier |
 | Тесты логики | PGlite (Postgres в WASM) + `scripts/test-schema.mjs` | Проверка SQL без Supabase |
@@ -40,7 +40,8 @@ src/
 | Таблица | Что хранит |
 |---|---|
 | `app_settings` | Настройки: часовой пояс, лимиты, порог жалоб, дни до очистки, логины президента |
-| `profiles` | Пользователь: имя, логин GitHub, аватар, роль, блокировка |
+| `profiles` | Пользователь: имя, логин, роль, блокировка |
+| `signup_log` | IP регистраций за сутки (ограничение частоты) |
 | `posts` | Желание: неделя, текст, автор, `hidden`, `reviewed` |
 | `votes` | Голос: желание, пользователь, ±1 |
 | `reports` | Жалоба: желание, пользователь, причина |
@@ -74,6 +75,8 @@ src/
 | `search_users(query)` | модератор | Поиск людей |
 | `set_banned(user, bool)` | модератор | Блокировка ученика |
 | `set_role(user, role)` | президент | Назначить / снять модератора |
+| `set_school_code(code)` | президент | Код школы для регистрации |
+| `check_registration` / `create_profile` | Edge Function | Проверки и создание профиля при регистрации |
 | `mod_overview()` | модератор | Очередь, желания недели, слова, журнал, число подписчиков |
 | `save_push_subscription` / `remove_push_subscription` | все | Подписка на push |
 | `maintain()` | cron | Победитель и очистка |

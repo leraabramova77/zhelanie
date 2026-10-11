@@ -27,6 +27,7 @@ export interface ModLogEntry {
 
 export interface ModOverview {
   role: Role;
+  schoolCode: string | null;
   threshold: number;
   queue: ModWish[];
   posts: ModWish[];
@@ -77,4 +78,6 @@ export const ACTION_LABEL: Record<string, string> = {
   ban: 'заблокировал(а)',
   unban: 'разблокировал(а)',
   broadcast: 'отправил(а) уведомление всем',
+  reset_password: 'выдал(а) временный пароль',
+  set_school_code: 'изменил(а) код школы',
 };

@@ -8,11 +8,12 @@ import { BroadcastForm } from '@/features/broadcast';
 import { useDeleteWish } from '@/features/delete-wish';
 import { UserManager } from '@/features/manage-user';
 import { useRestoreWish } from '@/features/restore-wish';
+import { SchoolCodeForm } from '@/features/school-code';
 import { dateTime, plural } from '@/shared/lib';
 import { ReasonPicker } from '@/shared/ui';
 import { type ModTab, useModTab } from '../model/store';
 
-export function ModerationPanel({ data }: { data: ModOverview }) {
+export function ModerationPanel({ data, myId }: { data: ModOverview; myId?: string }) {
   const { tab, setTab } = useModTab();
   const president = canManageRoles(data.role);
 
@@ -23,7 +24,7 @@ export function ModerationPanel({ data }: { data: ModOverview }) {
     ['people', 'Люди'],
     ['log', 'Журнал'],
   ];
-  if (president) tabs.push(['broadcast', 'Рассылка']);
+  if (president) tabs.push(['broadcast', 'Президент']);
 
   return (
     <div className="stack">
@@ -60,7 +61,7 @@ export function ModerationPanel({ data }: { data: ModOverview }) {
       )}
 
       {tab === 'words' && <BannedWordsEditor words={data.words} />}
-      {tab === 'people' && <UserManager myRole={data.role} />}
+      {tab === 'people' && <UserManager myRole={data.role} myId={myId} />}
 
       {tab === 'log' && (
         <section className="card">
@@ -78,7 +79,12 @@ export function ModerationPanel({ data }: { data: ModOverview }) {
         </section>
       )}
 
-      {tab === 'broadcast' && president && <BroadcastForm subscribers={data.subscribers} />}
+      {tab === 'broadcast' && president && (
+        <>
+          <SchoolCodeForm current={data.schoolCode ?? ''} />
+          <BroadcastForm subscribers={data.subscribers} />
+        </>
+      )}
     </div>
   );
 }

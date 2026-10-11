@@ -1,7 +1,7 @@
 'use client';
 
 import { useBoardQuery } from '@/entities/wish';
-import { SignInButton } from '@/features/auth';
+import { AuthDialog, SignInButton } from '@/features/auth';
 import { ProposeForm } from '@/features/propose-wish';
 import { isBackendConfigured } from '@/shared/config';
 import { errorMessage } from '@/shared/lib';
@@ -45,7 +45,8 @@ export function HomePage() {
               <section className="card signin-card">
                 <h2>Хочешь предложить желание?</h2>
                 <p className="muted">
-                  Войди через GitHub — так каждый голосует один раз и предлагает одно желание в неделю.
+                  Зарегистрируйся по логину и паролю — нужен только код школы. Каждый голосует один раз и предлагает
+                  одно желание в неделю.
                 </p>
                 <SignInButton variant="primary" />
               </section>
@@ -58,6 +59,7 @@ export function HomePage() {
       <footer className="wrap foot">
         Каждый понедельник начинается новое голосование, старые предложения удаляются через полторы недели.
       </footer>
+      <AuthDialog />
     </>
   );
 }

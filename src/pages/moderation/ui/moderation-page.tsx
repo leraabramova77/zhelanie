@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useModOverviewQuery } from '@/entities/moderation';
 import { useSession } from '@/entities/session';
-import { SignInButton } from '@/features/auth';
+import { AuthDialog, SignInButton } from '@/features/auth';
 import { errorMessage } from '@/shared/lib';
 import { ModerationPanel } from '@/widgets/moderation-panel';
 
@@ -36,7 +36,8 @@ export function ModerationPage() {
           <p className="muted">{errorMessage(overview.error)}. Модераторов назначает президент школьного совета.</p>
         </section>
       )}
-      {overview.data && <ModerationPanel data={overview.data} />}
+      {overview.data && <ModerationPanel data={overview.data} myId={session?.user.id} />}
+      <AuthDialog />
     </main>
   );
 }

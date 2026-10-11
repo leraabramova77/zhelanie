@@ -201,6 +201,42 @@ await expectOk('победитель прошлой недели и удален
   assert(!(await postId('Очень старое')), 'старое не удалено');
 });
 
+console.log('Регистрация и код школы');
+const check = async (login, name, code, ip = '1.1.1.1') =>
+  (await db.query('select check_registration($1, $2, $3, $4) as e', [login, name, code, ip])).rows[0].e;
+await expectOk('президент задаёт код школы', () => as('lera', `select set_school_code('Shkola5')`));
+await expectError('модератор не меняет код', () => as('vova', `select set_school_code('x')`), 'Недостаточно прав');
+await expectOk('неверный код отклоняется', async () =>
+  assert((await check('newkid', 'Новичок', 'wrong'))?.includes('код'), 'нет ошибки'),
+);
+await expectOk('код без учёта регистра подходит', async () =>
+  assert((await check('newkid', 'Новичок', 'SHKOLA5')) === null, 'ошибка'),
+);
+await expectOk('плохой логин отклоняется', async () =>
+  assert((await check('Ж!', 'Новичок', 'shkola5'))?.includes('Логин'), 'нет ошибки'),
+);
+await expectOk('занятый логин отклоняется', async () =>
+  assert((await check('masha', 'Маша 2', 'shkola5'))?.includes('занят'), 'нет ошибки'),
+);
+await expectOk('мат в имени отклоняется', async () =>
+  assert((await check('kid2', 'Сука Петров', 'shkola5'))?.includes('запрещённое'), 'нет ошибки'),
+);
+await expectOk('новый ученик получает роль ученика (президент уже есть)', async () => {
+  const [{ id }] = (
+    await db.query(`insert into auth.users values (gen_random_uuid(), 'newkid@zhelanie.local', '{}') returning id`)
+  ).rows;
+  const r = (await db.query(`select create_profile($1, 'Новичок', 'newkid', '1.1.1.1') as r`, [id])).rows[0].r;
+  assert(r === 'member', r);
+});
+await expectOk('первый без президента становится президентом', async () => {
+  await db.exec(`update profiles set role = 'member' where role = 'president'`);
+  const [{ id }] = (
+    await db.query(`insert into auth.users values (gen_random_uuid(), 'boss@zhelanie.local', '{}') returning id`)
+  ).rows;
+  const r = (await db.query(`select create_profile($1, 'Босс', 'boss', '2.2.2.2') as r`, [id])).rows[0].r;
+  assert(r === 'president', r);
+});
+
 console.log('Права из браузера');
 await expectError(
   'anon не читает таблицы напрямую',

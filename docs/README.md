@@ -9,6 +9,6 @@
 | [business-rules.md](business-rules.md) | Все правила: неделя, голосование, лимиты, очистка, уведомления |
 | [moderation.md](moderation.md) | Система модерации: ранги, фильтр слов, жалобы, блокировки, журнал |
 | [architecture.md](architecture.md) | Стек, Feature-Sliced Design, база данных, безопасность |
-| [setup.md](setup.md) | Как поднять проект локально и задеплоить (Supabase, GitHub OAuth, Pages) |
+| [setup.md](setup.md) | Как поднять проект локально и задеплоить (Supabase, вход, Pages) |
 | [decisions.md](decisions.md) | Журнал решений: что и почему выбрали |
 | [changelog.md](changelog.md) | История версий |

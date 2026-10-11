@@ -18,6 +18,8 @@ create table if not exists app_settings (
   president_logins text[] not null default '{}'  -- GitHub-логины, которые получают роль президента при входе
 );
 insert into app_settings default values on conflict do nothing;
+-- Код школы: без него нельзя зарегистрироваться. Президент меняет его в разделе модерации.
+alter table app_settings add column if not exists school_code text not null default '';
 
 create table if not exists app_meta (key text primary key);
 
@@ -32,6 +34,14 @@ create table if not exists profiles (
   banned boolean not null default false,
   created_at timestamptz not null default now()
 );
+
+create unique index if not exists profiles_login on profiles (lower(login));
+
+create table if not exists signup_log (
+  ip text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists signup_log_ip on signup_log (ip, created_at);
 
 create table if not exists posts (
   id uuid primary key default gen_random_uuid(),
@@ -98,7 +108,7 @@ do $$
 declare t text;
 begin
   foreach t in array array['app_settings', 'app_meta', 'profiles', 'posts', 'votes', 'reports', 'winners',
-                           'banned_words', 'mod_log', 'push_subscriptions', 'sent_reminders'] loop
+                           'banned_words', 'mod_log', 'push_subscriptions', 'sent_reminders', 'signup_log'] loop
     execute format('alter table %I enable row level security', t);
     execute format('revoke all on table %I from anon, authenticated', t);
   end loop;
@@ -226,6 +236,48 @@ begin
     on conflict do nothing;
     insert into app_meta values ('words_seeded');
   end if;
+end $$;
+
+-- ---------- Регистрация (вызывает Edge Function «account» с service role) ----------
+
+-- Проверки перед созданием аккаунта. Возвращает текст ошибки или null.
+create or replace function check_registration(p_login text, p_name text, p_code text, p_ip text) returns text
+language plpgsql security definer set search_path = public as $$
+declare s app_settings;
+begin
+  select * into s from app_settings;
+  if s.school_code <> '' and lower(btrim(coalesce(p_code, ''))) <> lower(s.school_code) then
+    return 'Неверный код школы. Спроси его у школьного совета';
+  end if;
+  if coalesce(p_login, '') !~ '^[a-z0-9_.-]{3,20}$' then
+    return 'Логин: 3–20 символов, латинские буквы, цифры, точка, дефис или подчёркивание';
+  end if;
+  if length(btrim(coalesce(p_name, ''))) < 2 or length(btrim(p_name)) > 40 then
+    return 'Имя: от 2 до 40 символов';
+  end if;
+  if find_banned_word(p_name || ' ' || p_login) is not null then
+    return 'В имени или логине есть запрещённое слово';
+  end if;
+  if exists (select 1 from profiles where lower(login) = p_login) then
+    return 'Такой логин уже занят — придумай другой';
+  end if;
+  if (select count(*) from signup_log where ip = coalesce(p_ip, '') and created_at > now() - interval '1 hour') >= 60 then
+    return 'Слишком много регистраций с этого устройства, попробуй через час';
+  end if;
+  return null;
+end $$;
+
+-- Создаёт профиль нового пользователя. Первый зарегистрированный (когда президента ещё нет) становится президентом.
+create or replace function create_profile(p_id uuid, p_name text, p_login text, p_ip text) returns text
+language plpgsql security definer set search_path = public as $$
+declare r text;
+begin
+  r := case when exists (select 1 from profiles where role = 'president') then 'member' else 'president' end;
+  insert into profiles (id, name, login, role) values (p_id, btrim(p_name), p_login, r)
+  on conflict (id) do update set name = excluded.name, login = excluded.login;
+  insert into signup_log (ip) values (coalesce(p_ip, ''));
+  delete from signup_log where created_at < now() - interval '1 day';
+  return r;
 end $$;
 
 -- ---------- Итоги недели и очистка ----------
@@ -503,6 +555,18 @@ begin
   perform log_action(me.id, case when p_banned then 'ban' else 'unban' end, target.name);
 end $$;
 
+create or replace function set_school_code(p_code text) returns text
+language plpgsql security definer set search_path = public as $$
+declare
+  me profiles := require_role('president');
+  c text := lower(btrim(coalesce(p_code, '')));
+begin
+  if c <> '' and (length(c) < 4 or length(c) > 30) then raise exception 'Код школы: от 4 до 30 символов'; end if;
+  update app_settings set school_code = c;
+  perform log_action(me.id, 'set_school_code', case when c = '' then 'код отключён' else 'код изменён' end);
+  return c;
+end $$;
+
 create or replace function mod_overview() returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare
@@ -511,6 +575,7 @@ declare
 begin
   return jsonb_build_object(
     'role', me.role,
+    'schoolCode', case when me.role = 'president' then (select school_code from app_settings) end,
     'threshold', (select report_hide_threshold from app_settings),
     'queue', coalesce((
       select jsonb_agg(jsonb_build_object(
@@ -562,5 +627,5 @@ grant execute on function get_board(), save_push_subscription(text, text, text),
   to anon, authenticated;
 grant execute on function create_post(text), vote(uuid, int), report_post(uuid, text), delete_post(uuid, text),
   restore_post(uuid), add_banned_word(text), remove_banned_word(text), search_users(text),
-  set_role(uuid, text), set_banned(uuid, boolean), mod_overview()
+  set_role(uuid, text), set_banned(uuid, boolean), mod_overview(), set_school_code(text)
   to authenticated;

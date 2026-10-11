@@ -6,29 +6,25 @@
 
 1. Создать проект на https://supabase.com (регион — Frankfurt / ближайший).
 2. SQL Editor → выполнить [supabase/schema.sql](../supabase/schema.sql).
-3. Назначить президента:
-   ```sql
-   update app_settings set president_logins = '{leraabramova77}';
-   ```
+3. Задать код школы: `update app_settings set school_code = 'shkola123';` Президентом станет первый зарегистрированный.
 4. Project Settings → API: взять **Project URL** и ключ **anon / publishable**.
 
 ## Текущая установка (прод)
 
 - Supabase-проект `zngvtcygybnxrlmdmxme` («leraabramova77's Project», регион ap-southeast-2).
   В нём же живут таблицы другого проекта Леры (`classes`, `homework`, `users`) — схема их не трогает.
-- Вход: GitHub App **zhelanie-nedeli-lera77** (https://github.com/apps/zhelanie-nedeli-lera77), создан через
-  manifest flow, разрешение «Email addresses: read». Его Client ID / secret прописаны в Supabase → Auth → GitHub.
+- Вход: логин + пароль. В Supabase → Auth: Email provider включён, «Allow new users to sign up» выключен,
+  подтверждение почты не требуется. Аккаунты создаёт Edge Function `account`.
+- Президент: Лера, логин `lera`. Код школы — в «Модерация → Президент».
+- GitHub App `zhelanie-nedeli-lera77` больше не используется (вход через GitHub выключен) — его можно удалить
+  в https://github.com/settings/apps.
 - Сайт: https://leraabramova77.github.io/zhelanie/ (репозиторий `leraabramova77/zhelanie`).
 
-## 2. Вход через GitHub
+## 2. Вход по логину и паролю
 
-Подходит и GitHub App (как сейчас), и классический OAuth App:
-
-1. https://github.com/settings/applications/new
-   - Homepage URL: `https://leraabramova77.github.io/zhelanie/`
-   - Authorization callback URL: `https://<ref>.supabase.co/auth/v1/callback`
-2. Скопировать **Client ID**, создать **Client secret**.
-3. Supabase → Authentication → Sign In / Providers → GitHub: включить, вставить ID и secret.
+1. Supabase → Authentication → Sign In / Providers → Email: включить; «Confirm email» выключить.
+2. Там же выключить «Allow new users to sign up» — регистрироваться можно только через функцию `account`.
+3. `npx supabase functions deploy account --project-ref <ref> --no-verify-jwt --use-api`
 4. Supabase → Authentication → URL Configuration:
    - Site URL: `https://leraabramova77.github.io/zhelanie/`
    - Redirect URLs: `https://leraabramova77.github.io/zhelanie/**`, `http://localhost:3000/**`
